@@ -1,0 +1,152 @@
+<html>
+
+<body style="text-align: center;background:#000;">
+    <canvas id='canvas' style="margin:0 auto;">
+    </canvas>
+    <script>
+        var commonHeight = 600;
+        var commonWidth = 430;
+        function background(props) {
+            this.name = props.name || '匿名'; // 默认值为'匿名'
+            this.centerWidth = props.centerWidth || commonWidth / 2;
+            this.centerHeight = props.centerHeight || commonHeight / 2; // 默认值为高度一半
+            this.src = props.src || '';
+        }
+        function createBackground(props) {
+            return new background(props || {})
+        }
+        var Scizor = createBackground({ name: '巨钳螳螂', centerWidth: 201/430*commonWidth, centerHeight: 200/600*commonHeight, src: '/assets/images/1.jpg' });
+        var Mewtwo = createBackground({ name: '超梦', centerWidth: 159/430*commonWidth, centerHeight: 258/600*commonHeight, src: '/assets/images/2.jpg' });
+        var Blastoise = createBackground({ name: '水箭龟', centerWidth: 298/430*commonWidth, centerHeight: 231/600*commonHeight, src: '/assets/images/3.jpg' });
+        var Charizard = createBackground({ name: '喷火龙', centerWidth: 337/430*commonWidth, centerHeight: 240/600*commonHeight, src: '/assets/images/4.jpg' });
+        var Venusaur = createBackground({ name: '妙蛙花', centerWidth: 100/430*commonWidth, centerHeight: 202/600*commonHeight, src: '/assets/images/5.jpg' });
+
+        var pokemons = [Scizor, Mewtwo, Blastoise, Charizard, Venusaur];
+        var promises = []
+        for(var i=0;i<pokemons.length;i++){
+            var image = new Image();
+            image.src = pokemons[i].src;
+            var promise = new Promise(function(resolve, reject){
+                image.onload = function(){
+                    resolve("装载成功!");
+                }
+            });
+            promises.push(promise);
+            pokemons[i].image = image;
+        }
+
+        var corders = {
+            topLeft: { width: 0, height: 0 },
+            topRight: { width: commonWidth, height: 0 },
+            bottomLeft: { width: 0, height: commonHeight },
+            bottomRight: { width: commonWidth, height: commonHeight }
+        }
+        var view = {
+            isOpening: true,
+            isClosing: false,
+            currentPokemon: 0,
+            circle: {
+                radius: 0,
+                center: {
+                    width: pokemons[0].centerWidth,
+                    height: pokemons[0].centerHeight
+                },
+            },
+            farthiestCorderLength: function () {
+                var max = 0;
+                for (var corder in corders) {
+                    var lengthDiff = (corders[corder].width - this.circle.center.width)*(corders[corder].width - this.circle.center.width) + (corders[corder].height - this.circle.center.height)*(corders[corder].height - this.circle.center.height);
+                    if (lengthDiff > max) {
+                        max = lengthDiff;
+                    }
+                }
+                return max;
+            },
+            isMax: function () {
+                var isMax = false;
+                if (this.circle.radius*this.circle.radius >= this.farthiestCorderLength()) {
+                    isMax = true;
+                }
+                return isMax;
+            },
+            isMin: function () {
+                var isMin = false;
+                if (this.circle.radius <= 0) {
+                    isMin = true;
+                }
+                return isMin;
+            },
+            increaseCircleRadius: function () {
+                this.circle.radius++;
+            },
+            decreaseCircleRadius: function () {
+                if(this.circle.radius>0){
+                    this.circle.radius--;
+                }
+                
+            },
+            open: function () {
+                this.currentPokemon++;
+                if (this.currentPokemon == pokemons.length) {
+                    this.currentPokemon = 0;
+                }
+                this.circle.center.width =  pokemons[this.currentPokemon].centerWidth;
+                this.circle.center.height =  pokemons[this.currentPokemon].centerHeight;
+                this.isClosing = false;
+                this.isOpening = true;
+            },
+            close: function () {
+                this.isClosing = true;
+                this.isOpening = false;
+            },
+            drawImage: function (ctx, image) {
+                ctx.globalCompositeOperation = "destination-over";
+                ctx.drawImage(image, 0, 0);
+            },
+            drawCircle: function (ctx,image) {
+                ctx.fillStyle = ctx.createPattern(image, "no-repeat");
+                ctx.beginPath();
+                ctx.arc(this.circle.center.width, this.circle.center.height, this.circle.radius, 0, Math.PI * 2, true);
+                ctx.fill();
+                // ctx.clip();
+            },
+            drawCover: function (ctx) {
+                ctx.fillStyle  = '#000';
+                ctx.fillRect(0, 0, commonWidth, commonHeight);
+            }
+        }
+        function draw() {
+            var c = document.getElementById('canvas');
+            c.width = commonWidth;
+            c.height = commonHeight;
+            var ctx = document.getElementById('canvas').getContext('2d');
+            ctx.clearRect(0, 0, commonWidth, commonHeight);
+            
+            if (view.isOpening) {
+                view.increaseCircleRadius();
+                if (view.isMax()) {
+                    view.close();
+                }
+            }else if(view.isClosing){
+                view.decreaseCircleRadius();
+                if (view.isMin()) {
+                    view.open();
+                }
+            }
+            view.drawCover(ctx);
+            view.drawCircle(ctx,pokemons[view.currentPokemon].image);
+            // ctx.save();
+            // view.drawImage(ctx,pokemons[view.currentPokemon].image);
+            // ctx.restore();
+
+            
+        }
+        Promise.all(promises).then(values => { 
+            console.log(values);
+            return setInterval(draw, 3);
+        });
+        
+    </script>
+</body>
+
+</html>
